@@ -1,4 +1,5 @@
 from .protocol import Paper
+import datetime
 import math
 
 
@@ -129,3 +130,32 @@ def render_email(papers:list[Paper]) -> str:
 
     content = '<br>' + '</br><br>'.join(parts) + '</br>'
     return framework.replace('__CONTENT__', content)
+
+
+def render_feishu_text(papers:list[Paper]) -> str:
+    """Render the recommended papers as a plain-text Feishu bot message.
+
+    The message always contains the lowercase keyword "papers" (required by
+    the bot's security setting) in the header line.
+    """
+    if len(papers) == 0:
+        return "papers：今日未发现达到推荐标准的新预印本。"
+    today = datetime.date.today().strftime('%Y-%m-%d')
+    lines = [f"📚 Zotero Daily | {today} | papers", ""]
+    for i, p in enumerate(papers, 1):
+        rate = round(p.score, 1) if p.score is not None else 'Unknown'
+        author_list = [a for a in p.authors]
+        if len(author_list) <= 5:
+            authors = ', '.join(author_list)
+        else:
+            authors = ', '.join(author_list[:3] + ['...'] + author_list[-2:])
+        lines.append(f"{i}. {p.title}")
+        lines.append(f"   作者: {authors}")
+        lines.append(f"   相关度 {rate} | {p.source}")
+        if p.tldr:
+            lines.append(f"   TL;DR: {p.tldr}")
+        lines.append(f"   {p.url}")
+        if p.pdf_url:
+            lines.append(f"   PDF: {p.pdf_url}")
+        lines.append("")
+    return "\n".join(lines)

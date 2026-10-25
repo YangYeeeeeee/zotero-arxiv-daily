@@ -1,8 +1,10 @@
+import json
 import tarfile
 import re
 import glob
 import math
 import smtplib
+import urllib.request
 from collections import Counter
 from email.header import Header
 from email.mime.text import MIMEText
@@ -169,3 +171,22 @@ def send_email(config:DictConfig, html:str):
     server.login(sender, password)
     server.sendmail(sender, [receiver], msg.as_string())
     server.quit()
+
+
+def send_feishu(config: DictConfig, content: str):
+    """Send the digest to a Feishu custom bot via webhook (stdlib only, no new deps)."""
+    webhook = config.feishu.webhook_url
+    payload = json.dumps(
+        {"msg_type": "text", "content": {"text": content}}
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        webhook,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+    if result.get("code") != 0:
+        raise RuntimeError(f"Feishu webhook returned error: {result}")
+    logger.info("Feishu message sent successfully")
